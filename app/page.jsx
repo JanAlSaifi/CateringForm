@@ -3,75 +3,87 @@ import { useState } from "react";
 
 export default function Home() {
   const [buttonMode, setButtonMode] = useState("mesa");
-  const [countMesa, setCountMesa] = useState({
-    Hummus: 0,
-    Tabouleh: 0,
-    Labneh: 0,
-    WalnussPaprikaPaste: 0,
-    Kartoffeln: 0,
-    Auberginen: 0,
-    Blumenkohl: 0,
-    Schneidebohnen: 0,
-    RoteBeeteSalat: 0,
-    Olivensalat: 0,
-    Bohnen: 0,
-    Karotten: 0,
-    KichererbsenSalat: 0,
-    Saubohnen: 0,
-    Spinat: 0,
-    Okraschoten: 0,
-    Kohlrabi: 0,
-    Artischockensalat: 0,
-    Moussaka: 0,
-    "Kartoffeln frittiert": 0,
-    Auberginenmus: 0,
-    Linsensalat: 0,
-    Bulgur: 0,
-  });
+  const [selectedMesa, setSelectedMesa] = useState("tenMesa");
+  const [selectedDishes, setSelectedDishes] = useState([]);
 
-  const [selected, setSelected] = useState(null);
+  const dishes = [
+    "Hummus",
+    "Tabouleh",
+    "Labneh",
+    "Walnuss-Paprika-Paste",
+    "Kartoffeln",
+    "Auberginen",
+    "Blumenkohl",
+    "Schneidebohnen",
+    "Rote-Beete-Salat",
+    "Olivensalat",
+    "Bohnen",
+    "Karotten",
+    "Kichererbsen-Salat",
+    "Saubohnen",
+    "Spinat",
+    "Okraschoten",
+    "Kohlrabi",
+    "Artischockensalat",
+    "Moussaka",
+    "Kartoffeln frittiert",
+    "Auberginenmus",
+    "Linsensalat",
+    "Bulgur",
+  ];
 
-  const AddMesa = (item) => {
-    setCountMesa((prevCounts) => ({
-      ...prevCounts,
-      [item]: prevCounts[item] + 1,
-    }));
+  // const AddMesa = (item) => {
+  //   setCountMesa((prevCounts) => ({
+  //     ...prevCounts,
+  //     [item]: prevCounts[item] + 1,
+  //   }));
+  // };
+  // const SubMesa = (item) => {
+  //   setCountMesa((prevCounts) => ({
+  //     ...prevCounts,
+  //     [item]: prevCounts[item] - 1,
+  //   }));
+  // };
+
+  const handleMesaSelect = (value) => {
+    setSelectedMesa(value);
+    setSelectedDishes([]);
   };
-  const SubMesa = (item) => {
-    setCountMesa((prevCounts) => ({
-      ...prevCounts,
-      [item]: prevCounts[item] - 1,
-    }));
-  };
 
-  const handleSelect = (value) => {
-    setSelected(selected === value ? null : value);
+  const handleDishSelect = (dish) => {
+    if (selectedDishes.includes(dish)) {
+      setSelectedDishes(selectedDishes.filter((item) => item !== dish));
+    } else if (
+      selectedDishes.length < (selectedMesa === "eightMesa" ? 8 : 10)
+    ) {
+      setSelectedDishes([...selectedDishes, dish]);
+    }
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="grid items-center justify-items-center p-8 gap-6 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start"></main>
       <div className="flex gap-6 items-center sm:items-start text-5xl ">
         <button
-          className=" bg-violet-500 hover:bg-violet-600 p-2 rounded-lg"
+          className=" bg-violet-500 hover:bg-violet-600 p-4 rounded-lg"
           onClick={() => setButtonMode("mesa")}
         >
           Mesa
         </button>
         <button
-          className=" bg-violet-500 hover:bg-violet-600 p-2 rounded-lg"
+          className=" bg-violet-500 hover:bg-violet-600 p-4 rounded-lg"
           onClick={() => setButtonMode("menü")}
         >
           Menü
         </button>
         <button
-          className=" bg-violet-500 hover:bg-violet-600 p-2 rounded-lg"
+          className=" bg-violet-500 hover:bg-violet-600 p-4 rounded-lg"
           onClick={() => setButtonMode("fingerfood")}
         >
           FingerFood
         </button>
         <button
-          className=" bg-violet-500 hover:bg-violet-600 p-2 rounded-lg"
+          className=" bg-violet-500 hover:bg-violet-600 p-4 rounded-lg"
           onClick={() => setButtonMode("optionen")}
         >
           Optionen
@@ -81,53 +93,60 @@ export default function Home() {
         {buttonMode === "mesa" && (
           <>
             <div>
-              <h1 className="text-6xl m-3 text-center">Mesa</h1>
+              <h1 className="text-8xl font-bold my-8 text-center">Mesa</h1>
               <div className="flex flex-row gap-4 my-6">
-                <input
-                  type="checkbox"
-                  id="eightMesa"
-                  name="eightMesa"
-                  value="eightMesa"
-                  className="hidden"
-                />
                 <label
-                  htmlFor="eightMesa"
                   className={`cursor-pointer text-lg px-6 py-3 border-2 rounded-lg ${
-                    selected === "eightMesa"
+                    selectedMesa === "eightMesa"
                       ? "border-violet-500 bg-violet-500"
-                      : ""
+                      : "border-gray-300"
                   } transition duration-200`}
-                  onClick={() => handleSelect("eightMesa")}
+                  onClick={() => handleMesaSelect("eightMesa")}
                 >
                   8 Vorspeisen
                 </label>
-                <input
-                  type="checkbox"
-                  id="tenMesa"
-                  name="tenMesa"
-                  value="tenMesa"
-                  className="hidden"
-                />
                 <label
-                  htmlFor="tenMesa"
                   className={`cursor-pointer text-lg px-6 py-3 border-2 rounded-lg ${
-                    selected === "tenMesa"
+                    selectedMesa === "tenMesa"
                       ? "border-violet-500 bg-violet-500"
-                      : ""
+                      : "border-gray-300"
                   } transition duration-200`}
-                  onClick={() => handleSelect("tenMesa")}
+                  onClick={() => handleMesaSelect("tenMesa")}
                 >
                   10 Vorspeisen
                 </label>
               </div>
-              {Object.keys(countMesa).map((item) => (
-                <div key={item} className="mb-4 text-xl">
-                  <button onClick={() => AddMesa(item)}>{item}:</button>
+              <p className="text-lg mt-6">
+                {selectedDishes.length} von{" "}
+                {selectedMesa === "eightMesa" ? 8 : 10} Vorspeisen ausgewählt
+              </p>
+              <div className="flex flex-col gap-4 pt-5">
+                {dishes.map((dish) => {
+                  const isSelected = selectedDishes.includes(dish);
+                  const isDisabled =
+                    selectedDishes.length >=
+                      (selectedMesa === "eightMesa" ? 8 : 10) && !isSelected;
 
-                  <span className="pl-7">{countMesa[item]}</span>
-                  <button onClick={() => SubMesa(item)}>-</button>
-                </div>
-              ))}
+                  return (
+                    <label
+                      key={dish}
+                      className={`cursor-pointer text-lg px-4 py-2 border-2 rounded-lg transition duration-200
+          ${isSelected ? "border-violet-500 " : "border-gray-300"}
+          ${isDisabled ? "opacity-50" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        value={dish}
+                        checked={isSelected}
+                        onChange={() => handleDishSelect(dish)}
+                        className="hidden"
+                        disabled={isDisabled}
+                      />
+                      {dish}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
