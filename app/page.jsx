@@ -6,6 +6,11 @@ export default function Home() {
   const [selectedMesa, setSelectedMesa] = useState("tenMesa");
   const [selectedDishes, setSelectedDishes] = useState([]);
 
+  const [counts, setCounts] = useState({
+    vegetarisch: 0,
+    beiti: 0,
+  });
+
   const dishes = [
     "Hummus",
     "Tabouleh",
@@ -32,18 +37,19 @@ export default function Home() {
     "Bulgur",
   ];
 
-  // const AddMesa = (item) => {
-  //   setCountMesa((prevCounts) => ({
-  //     ...prevCounts,
-  //     [item]: prevCounts[item] + 1,
-  //   }));
-  // };
-  // const SubMesa = (item) => {
-  //   setCountMesa((prevCounts) => ({
-  //     ...prevCounts,
-  //     [item]: prevCounts[item] - 1,
-  //   }));
-  // };
+  const add = (menuType) => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      [menuType]: prevCounts[menuType] + 1,
+    }));
+  };
+
+  const sub = (menuType) => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      [menuType]: Math.max(0, prevCounts[menuType] - 1),
+    }));
+  };
 
   const handleMesaSelect = (value) => {
     setSelectedMesa(value);
@@ -150,7 +156,51 @@ export default function Home() {
             </div>
           </>
         )}
-        {buttonMode === "menü" && <></>}
+        {buttonMode === "menü" && (
+          <>
+            <h1 className="text-8xl font-bold my-8 text-center">Mesa</h1>
+            <div className="flex flex-col gap-4 my-6">
+              <div>
+                <h2 className="text-5xl font-bold m-3 text-center">
+                  Vegetarisches Menü
+                </h2>
+                <div className="">
+                  <button
+                    className="p-2 bg-red-500 text-white rounded"
+                    onClick={() => sub("vegetarisch")}
+                  >
+                    -
+                  </button>
+                  <span className="text-lg">{counts.vegetarisch}</span>
+                  <button
+                    className="p-2 bg-green-500 text-white rounded"
+                    onClick={() => add("vegetarisch")}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <h2 className="text-5xl font-bold m-3 text-center">
+                  Beiti Menü
+                </h2>
+                <button
+                  className="p-2 bg-red-500 text-white rounded"
+                  onClick={() => sub("beiti")}
+                >
+                  -
+                </button>
+                <span className="text-lg">{counts.beiti}</span>
+                <button
+                  className="p-2 bg-green-500 text-white rounded"
+                  onClick={() => add("beiti")}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </>
+        )}
         {buttonMode === "fingerfood" && <></>}
         {buttonMode === "optionen" && <></>}
       </div>
