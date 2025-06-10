@@ -11,95 +11,224 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  BorderStyle,
+  ImageRun,
 } from "docx";
-
-// file-saver wird benötigt, um den Download im Browser auszulösen
 import { saveAs } from "file-saver";
 
-// Diese Funktion wird alle Bestelldaten erhalten und das Dokument erstellen
-export function generateDocx(order, prices, total) {
+// Diese Hauptfunktion erstellt das Dokument
+export async function generateDocx(order, prices, total) {
+  // 1. Logo vom Server/aus dem public-Ordner laden
+  let logoBuffer;
+  try {
+    const response = await fetch("/logo.png"); // Stellt sicher, dass logo.png im /public Ordner liegt
+    logoBuffer = await response.arrayBuffer();
+  } catch (error) {
+    console.error(
+      "Logo konnte nicht geladen werden. Stelle sicher, dass 'logo.png' im 'public' Ordner liegt.",
+      error
+    );
+  }
+
+  // 2. Dokument-Struktur aufbauen
   const doc = new Document({
     sections: [
       {
-        properties: {},
         children: [
+          createHeaderTable(order.deliveryDetails, logoBuffer), // Kopfzeile mit Adressen und Logo
+          new Paragraph({ text: " ", spacing: { after: 200 } }),
+          createMetaInfoTable(), // Tabelle für Rechnungsnummer und Datum
           new Paragraph({
-            children: [
-              new TextRun({
-                text: "Kostenvoranschlag Catering",
-                bold: true,
-                size: 32,
-              }),
-            ],
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
+            text: "Sehr geehrte Damen und Herren,",
+            spacing: { before: 400, after: 200 },
           }),
-
-          // Dynamische Sektionen hier einfügen
-          ...createMesaSection(order.mesa, prices),
-          ...createMenuSection(order.menus, prices),
-          ...createItemsTable(
-            "Fingerfood & Grillspezialitäten",
-            order.fingerfood,
-            prices.fingerfood
-          ),
-          ...createItemsTable(
-            "Hauptgerichte",
-            order.mainCourses,
-            prices.mainCourses
-          ),
-          ...createOptionsSection(order.options, prices.options),
-
-          // Gesamtpreis
           new Paragraph({
-            children: [
-              new TextRun({
-                text: `Gesamtpreis (inkl. MwSt.): ${total} €`,
-                bold: true,
-                size: 28,
-              }),
-            ],
-            alignment: AlignmentType.RIGHT,
-            spacing: { before: 400 },
+            text: "wir bedanken uns für den Auftrag und stellen Ihnen wie vereinbart folgende Leistung in Rechnung.",
           }),
+          createItemsTable(order, prices), // Haupttabelle mit allen bestellten Artikeln
+          createTotalsTable(total), // Tabelle für Netto, MwSt. und Brutto
+          createFooter(), // Fußzeile mit Bankdaten etc.
         ],
       },
     ],
   });
 
-  // Das Dokument packen und den Download starten
+  // 3. Dokument packen und Download auslösen
   Packer.toBlob(doc).then((blob) => {
-    saveAs(blob, "Kostenvoranschlag-Catering.docx");
-    console.log("Dokument erfolgreich erstellt.");
+    saveAs(
+      blob,
+      `Rechnung-${order.deliveryDetails.contactPerson || "Catering"}.docx`
+    );
   });
 }
 
-// Helper-Funktionen, um die Sektionen zu erstellen
+// --- HELPER-FUNKTIONEN ZUM ERSTELLEN DER DOKUMENT-TEILE ---
 
-function createMesaSection(mesa, prices) {
-  if (!mesa.active) return [];
-  const pricePerPerson =
-    mesa.type === "8" ? prices.mesa8.toFixed(2) : prices.mesa10.toFixed(2);
-  return [
-    new Paragraph({
-      text: `Mesa für ${mesa.people} Personen (${mesa.type} Vorspeisen)`,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 300, after: 150 },
-    }),
-    new Paragraph({ text: `Preis pro Person: ${pricePerPerson}€` }),
-    new Paragraph({
-      text: "Ausgewählte Vorspeisen:",
-      bold: true,
-      spacing: { before: 100 },
-    }),
-    ...mesa.dishes.map(
-      (dish) => new Paragraph({ text: `- ${dish}`, bullet: { level: 0 } })
-    ),
-  ];
+// Erstellt die Kopfzeile (2-spaltig, unsichtbar)
+function createHeaderTable(details, logoBuffer) {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          // Linke Spalte: Adressen
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({ text: "Restaurant Beiti", bold: true }),
+                ],
+              }),
+              new Paragraph("Alsterdorfer Str. 76"),
+              new Paragraph("22299 Hamburg"),
+              new Paragraph({ text: " ", spacing: { after: 300 } }), // Abstand
+              new Paragraph(details.contactPerson),
+              new Paragraph(details.street),
+              new Paragraph(`${details.zipCode} ${details.city}`),
+            ],
+          }),
+          // Rechte Spalte: Logo und Kontaktdaten
+          new TableCell({
+            children: [
+              // Logo, falls es geladen wurde
+              ...(logoBuffer
+                ? [
+                    new Paragraph({
+                      children: [
+                        new ImageRun({
+                          data: logoBuffer,
+                          transformation: { width: 150, height: 100 },
+                        }),
+                      ],
+                      alignment: AlignmentType.RIGHT,
+                    }),
+                  ]
+                : []),
+              new Paragraph({ text: " ", spacing: { after: 100 } }),
+              new Paragraph({
+                text: "Telefon: +49 40 694 59 970",
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: "Mobil: +49 176 63881 118",
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: "info@beiti-hamburg.de",
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: "www.beiti-hamburg.de",
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: "Steuer-Nr: 49/206/01443",
+                alignment: AlignmentType.RIGHT,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
 }
 
-function createMenuSection(menus, prices) {
+// Erstellt die Tabelle für Rechnungs-Nr und Datum
+function createMetaInfoTable() {
+  const today = new Date();
+  const formattedDate = `${today.getDate().toString().padStart(2, "0")}.${(
+    today.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}.${today.getFullYear()}`;
+  // Erzeugt eine simple, einzigartige Nummer basierend auf der Zeit
+  const invoiceNumber = `RE-${today.getFullYear()}${
+    today.getMonth() + 1
+  }${today.getDate()}-${Date.now().toString().slice(-5)}`;
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({ children: [] }), // Leere Zelle links
+          new TableCell({
+            children: [
+              new Paragraph({
+                text: `Rechnung-Nr: ${invoiceNumber}`,
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: `Datum: ${formattedDate}`,
+                alignment: AlignmentType.RIGHT,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+// Erstellt die Haupt-Tabelle mit den bestellten Artikeln
+function createItemsTable(order, prices) {
+  const { mesa, menus, fingerfood, mainCourses, options } = order;
+  const tableHeader = new TableRow({
+    tableHeader: true,
+    children: [
+      new TableCell({
+        children: [new Paragraph({ text: "Menge", bold: true })],
+      }),
+      new TableCell({
+        children: [new Paragraph({ text: "Bezeichnung", bold: true })],
+      }),
+      new TableCell({
+        children: [new Paragraph({ text: "Einzelpreis", bold: true })],
+      }),
+      new TableCell({
+        children: [new Paragraph({ text: "Preis/Brutto", bold: true })],
+      }),
+    ],
+  });
+
+  const tableRows = [];
+
+  // Logik für Mesa
+  if (mesa.active) {
+    const price = mesa.type === "8" ? prices.mesa8 : prices.mesa10;
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph(`${mesa.people}`)] }),
+          new TableCell({
+            children: [new Paragraph(`Mesa (${mesa.type} Vorspeisen)`)],
+          }),
+          new TableCell({ children: [new Paragraph(`${price.toFixed(2)} €`)] }),
+          new TableCell({
+            children: [new Paragraph(`${(price * mesa.people).toFixed(2)} €`)],
+          }),
+        ],
+      })
+    );
+  }
+
+  // Logik für Menüs
   const menuItems = [
     {
       key: "vegetarisch",
@@ -113,122 +242,168 @@ function createMenuSection(menus, prices) {
     },
     { key: "beiti3", name: "Beiti Menü 3", price: prices.menuBeiti3 },
   ];
-  const createdMenus = menuItems.filter((item) => menus[item.key] > 0);
-  if (createdMenus.length === 0) return [];
-
-  return [
-    new Paragraph({
-      text: "Menüs",
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 300, after: 150 },
-    }),
-    ...createdMenus.map(
-      (item) =>
-        new Paragraph({
+  menuItems.forEach((item) => {
+    if (menus[item.key] > 0) {
+      tableRows.push(
+        new TableRow({
           children: [
-            new TextRun(`${menus[item.key]}x `),
-            new TextRun({ text: item.name, bold: true }),
-            new TextRun(` à ${item.price.toFixed(2)}€`),
+            new TableCell({ children: [new Paragraph(`${menus[item.key]}`)] }),
+            new TableCell({ children: [new Paragraph(item.name)] }),
+            new TableCell({
+              children: [new Paragraph(`${item.price.toFixed(2)} €`)],
+            }),
+            new TableCell({
+              children: [
+                new Paragraph(`${(item.price * menus[item.key]).toFixed(2)} €`),
+              ],
+            }),
           ],
         })
-    ),
+      );
+    }
+  });
+
+  // Logik für andere Posten (Fingerfood, Hauptgerichte, etc.)
+  const otherItems = [
+    ...Object.entries(fingerfood),
+    ...Object.entries(mainCourses),
   ];
-}
-
-function createItemsTable(title, items, itemPrices) {
-  const filteredItems = Object.entries(items).filter(([, count]) => count > 0);
-  if (filteredItems.length === 0) return [];
-
+  const otherPrices = { ...prices.fingerfood, ...prices.mainCourses };
   const formatName = (key) =>
     key
       .replace(/([A-Z])/g, " $1")
       .replace("Kaese", "Käse")
       .trim();
 
-  return [
-    new Paragraph({
-      text: title,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 300, after: 150 },
-    }),
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [
-        // Tabellenüberschrift
+  otherItems.forEach(([key, count]) => {
+    if (count > 0) {
+      tableRows.push(
         new TableRow({
           children: [
+            new TableCell({ children: [new Paragraph(`${count}`)] }),
             new TableCell({
-              children: [new Paragraph({ text: "Anzahl", bold: true })],
+              children: [
+                new Paragraph(
+                  formatName(key).charAt(0).toUpperCase() +
+                    formatName(key).slice(1)
+                ),
+              ],
             }),
             new TableCell({
-              children: [new Paragraph({ text: "Artikel", bold: true })],
+              children: [new Paragraph(`${otherPrices[key].toFixed(2)} €`)],
             }),
             new TableCell({
-              children: [new Paragraph({ text: "Preis/Stück", bold: true })],
+              children: [
+                new Paragraph(`${(otherPrices[key] * count).toFixed(2)} €`),
+              ],
             }),
           ],
-        }),
-        // Tabellenzeilen
-        ...filteredItems.map(
-          ([key, count]) =>
-            new TableRow({
-              children: [
-                new TableCell({ children: [new Paragraph(`${count}`)] }),
-                new TableCell({
-                  children: [
-                    new Paragraph(
-                      formatName(key).charAt(0).toUpperCase() +
-                        formatName(key).slice(1)
-                    ),
-                  ],
-                }),
-                new TableCell({
-                  children: [new Paragraph(`${itemPrices[key].toFixed(2)}€`)],
-                }),
-              ],
-            })
-        ),
-      ],
-    }),
-  ];
+        })
+      );
+    }
+  });
+
+  // Transportkosten
+  if (options.transport) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph("1")] }),
+          new TableCell({ children: [new Paragraph("Lieferkosten")] }),
+          new TableCell({ children: [new Paragraph("")] }), // Kein Einzelpreis
+          new TableCell({
+            children: [
+              new Paragraph(`${prices.options.transport.toFixed(2)} €`),
+            ],
+          }),
+        ],
+      })
+    );
+  }
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [tableHeader, ...tableRows],
+    spacing: { before: 400, after: 400 },
+  });
 }
 
-function createOptionsSection(options, optionPrices) {
-  const items = [];
-  if (options.dessertPeople > 0) {
-    const note = options.dessertPeople < 5 ? " (ab 5 Pers.)" : "";
-    items.push(
-      new Paragraph({
-        text: `${
-          options.dessertPeople
-        }x Dessert${note} à ${optionPrices.dessert.toFixed(2)}€`,
-      })
-    );
-  }
-  if (options.weinFlaschen > 0) {
-    items.push(
-      new Paragraph({
-        text: `${
-          options.weinFlaschen
-        }x Flasche Wein à ${optionPrices.wein.toFixed(2)}€`,
-      })
-    );
-  }
-  if (options.transport) {
-    items.push(
-      new Paragraph({
-        text: `1x Transport (Hamburg) à ${optionPrices.transport.toFixed(2)}€`,
-      })
-    );
-  }
-  if (items.length === 0) return [];
+// Erstellt die untere Tabelle für die Summen
+function createTotalsTable(totalBrutto) {
+  // Annahme: 7% MwSt. wie in der PDF-Rechnung
+  const totalNetto = (parseFloat(totalBrutto) / 1.07).toFixed(2);
+  const mwstAmount = (parseFloat(totalBrutto) - parseFloat(totalNetto)).toFixed(
+    2
+  );
 
-  return [
-    new Paragraph({
-      text: "Weitere Optionen",
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 300, after: 150 },
-    }),
-    ...items,
-  ];
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({ children: [] }), // Leere Zelle
+          new TableCell({
+            children: [
+              new Paragraph({
+                text: `Netto: ${totalNetto} €`,
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                text: `MwSt. 7%: ${mwstAmount} €`,
+                alignment: AlignmentType.RIGHT,
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `Gesamtbetrag Brutto: ${totalBrutto} €`,
+                    bold: true,
+                  }),
+                ],
+                alignment: AlignmentType.RIGHT,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+// Erstellt die Fußzeile mit den Bankdaten
+function createFooter() {
+  const today = new Date();
+  // Lieferdatum kann aus der App kommen, hier als Beispiel das heutige Datum
+  const lieferDatum = `${today.getDate().toString().padStart(2, "0")}.${(
+    today.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}.${today.getFullYear()}`;
+
+  return new Paragraph({
+    children: [
+      new TextRun({ text: `Lieferdatum: ${lieferDatum}`, break: 2 }),
+      new TextRun({
+        text: "Der Betrag ist innerhalb der nächsten sieben Tage auf das unten genannte Konto zu überweisen.",
+        break: 2,
+      }),
+      new TextRun({
+        text: "Restaurant Beiti Inh. Fadi Al Saifi",
+        bold: true,
+        break: 2,
+      }),
+      new TextRun({
+        text: "Commerzbank AG - IBAN: DE42200400000624647400 - BIC: COBADFFXXX",
+        break: 1,
+      }),
+    ],
+    spacing: { before: 300 },
+  });
 }

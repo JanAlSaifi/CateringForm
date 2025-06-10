@@ -21,10 +21,41 @@ const ToggleSwitch = ({ label, checked, onChange }) => {
   );
 };
 
+// Helper component for quantity controls (Dark Theme)
+const QuantityControl = ({ name, value, onUpdate }) => (
+  <div className="flex justify-between items-center p-2 border border-gray-700 rounded-lg">
+    <span className="text-lg text-gray-200">{name}</span>
+    <div className="flex items-center gap-3">
+      <button
+        className="p-2 w-10 h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-2xl transition-colors"
+        onClick={() => onUpdate(value - 1)}
+      >
+        -
+      </button>
+      <span className="text-lg w-8 text-center font-bold text-white">
+        {value}
+      </span>
+      <button
+        className="p-2 w-10 h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-2xl transition-colors"
+        onClick={() => onUpdate(value + 1)}
+      >
+        +
+      </button>
+    </div>
+  </div>
+);
+
 export default function Home() {
   const [buttonMode, setButtonMode] = useState("mesa");
 
   const [order, setOrder] = useState({
+    // HIER WURDEN DIE LIEFERDETAILS HINZUGEFÜGT
+    deliveryDetails: {
+      contactPerson: "",
+      street: "",
+      zipCode: "",
+      city: "",
+    },
     mesa: {
       active: false,
       type: "10", // '8' or '10'
@@ -118,6 +149,18 @@ export default function Home() {
     },
   };
 
+  // HIER WURDE DER HANDLER FÜR DIE ADRESSFELDER HINZUGEFÜGT
+  const handleDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setOrder((prev) => ({
+      ...prev,
+      deliveryDetails: {
+        ...prev.deliveryDetails,
+        [name]: value,
+      },
+    }));
+  };
+
   const handleMesaDishSelect = (dish) => {
     const isSelected = order.mesa.dishes.includes(dish);
     const maxDishes = order.mesa.type === "8" ? 8 : 10;
@@ -156,14 +199,12 @@ export default function Home() {
     total += order.menus.vegetarisch * prices.menuVegetarisch;
     total += order.menus.beiti1oder2 * prices.menuBeiti1oder2;
     total += order.menus.beiti3 * prices.menuBeiti3;
-
     for (const [item, count] of Object.entries(order.fingerfood)) {
       total += count * prices.fingerfood[item];
     }
     for (const [item, count] of Object.entries(order.mainCourses)) {
       total += count * prices.mainCourses[item];
     }
-
     if (order.options.dessertPeople >= 5) {
       total += order.options.dessertPeople * prices.options.dessert;
     }
@@ -171,7 +212,6 @@ export default function Home() {
     if (order.options.transport) {
       total += prices.options.transport;
     }
-
     return total.toFixed(2);
   };
 
@@ -180,32 +220,20 @@ export default function Home() {
     generateDocx(order, prices, total);
   };
 
-  const QuantityControl = ({ name, value, onUpdate }) => (
-    <div className="flex justify-between items-center p-2 border border-gray-700 rounded-lg">
-      <span className="text-lg text-gray-200">{name}</span>
-      <div className="flex items-center gap-3">
-        <button
-          className="p-2 w-10 h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-2xl transition-colors"
-          onClick={() => onUpdate(value - 1)}
-        >
-          -
-        </button>
-        <span className="text-lg w-8 text-center font-bold text-white">
-          {value}
-        </span>
-        <button
-          className="p-2 w-10 h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-2xl transition-colors"
-          onClick={() => onUpdate(value + 1)}
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 grid items-start justify-items-center p-4 sm:p-12 gap-6">
       <div className="flex flex-wrap gap-4 items-center justify-center">
+        {/* HIER WURDE DER NEUE BUTTON FÜR DIE LIEFERDETAILS HINZUGEFÜGT */}
+        <button
+          className={`p-4 rounded-lg text-white text-xl font-semibold transition-colors ${
+            buttonMode === "details"
+              ? "bg-red-900"
+              : "bg-red-800 hover:bg-red-700"
+          }`}
+          onClick={() => setButtonMode("details")}
+        >
+          Lieferdetails
+        </button>
         <button
           className={`p-4 rounded-lg text-white text-xl font-semibold transition-colors ${
             buttonMode === "mesa" ? "bg-red-900" : "bg-red-800 hover:bg-red-700"
@@ -245,6 +273,86 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col w-full max-w-2xl mb-24">
+        {/* HIER WURDE DIE NEUE SEKTION FÜR DIE LIEFERDETAILS HINZUGEFÜGT */}
+        {buttonMode === "details" && (
+          <div className="w-full">
+            <h1 className="text-5xl font-bold my-6 text-center text-red-400">
+              Lieferdetails
+            </h1>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col gap-4">
+              <h2 className="text-2xl font-bold mb-2 text-red-400/80">
+                Anschrift & Kontakt
+              </h2>
+              <div>
+                <label
+                  htmlFor="contactPerson"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
+                  Ansprechperson
+                </label>
+                <input
+                  type="text"
+                  name="contactPerson"
+                  id="contactPerson"
+                  value={order.deliveryDetails.contactPerson}
+                  onChange={handleDetailsChange}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="street"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
+                  Straße & Hausnummer
+                </label>
+                <input
+                  type="text"
+                  name="street"
+                  id="street"
+                  value={order.deliveryDetails.street}
+                  onChange={handleDetailsChange}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                />
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label
+                    htmlFor="zipCode"
+                    className="block text-sm font-medium text-gray-300 mb-1"
+                  >
+                    PLZ
+                  </label>
+                  <input
+                    type="text"
+                    name="zipCode"
+                    id="zipCode"
+                    value={order.deliveryDetails.zipCode}
+                    onChange={handleDetailsChange}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                  />
+                </div>
+                <div className="flex-[2]">
+                  <label
+                    htmlFor="city"
+                    className="block text-sm font-medium text-gray-300 mb-1"
+                  >
+                    Stadt
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    id="city"
+                    value={order.deliveryDetails.city}
+                    onChange={handleDetailsChange}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {buttonMode === "mesa" && (
           <div className="w-full">
             <h1 className="text-5xl font-bold my-6 text-center text-red-400">
@@ -261,7 +369,6 @@ export default function Home() {
                   }))
                 }
               />
-
               {order.mesa.active && (
                 <>
                   <div className="flex flex-col sm:flex-row gap-4 my-2">
@@ -296,7 +403,6 @@ export default function Home() {
                       10 Vorspeisen
                     </label>
                   </div>
-
                   <QuantityControl
                     name="Anzahl Personen"
                     value={order.mesa.people}
@@ -307,10 +413,10 @@ export default function Home() {
                       }))
                     }
                   />
-
                   <p className="text-lg mt-2 font-semibold text-gray-300">
+                    {" "}
                     {order.mesa.dishes.length} von {order.mesa.type} Vorspeisen
-                    ausgewählt
+                    ausgewählt{" "}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     {mesaDishes.map((dish) => {
@@ -619,7 +725,7 @@ export default function Home() {
             onClick={handleExport}
             className="bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-xl w-full sm:w-auto transition-colors"
           >
-            Bestellung speichern
+            Als Word-DOCX speichern
           </button>
         </div>
       </footer>
