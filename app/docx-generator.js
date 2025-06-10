@@ -1,5 +1,3 @@
-// docx-generator.js
-
 import {
   Document,
   Packer,
@@ -16,12 +14,10 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 
-// Diese Hauptfunktion erstellt das Dokument
 export async function generateDocx(order, prices, total) {
-  // 1. Logo vom Server/aus dem public-Ordner laden
   let logoBuffer;
   try {
-    const response = await fetch("/logo.png"); // Stellt sicher, dass logo.png im /public Ordner liegt
+    const response = await fetch("/logo.png");
     logoBuffer = await response.arrayBuffer();
   } catch (error) {
     console.error(
