@@ -49,7 +49,6 @@ export default function Home() {
   const [buttonMode, setButtonMode] = useState("mesa");
 
   const [order, setOrder] = useState({
-    // HIER WURDEN DIE LIEFERDETAILS HINZUGEFÜGT
     deliveryDetails: {
       contactPerson: "",
       street: "",
@@ -89,6 +88,8 @@ export default function Home() {
       dessertPeople: 0,
       weinFlaschen: 0,
       transport: false,
+      diverse100: 0,
+      diverse250: 0,
     },
   });
 
@@ -146,18 +147,16 @@ export default function Home() {
       dessert: 7.5,
       wein: 20.0,
       transport: 35.0,
+      diverse100: 1.0,
+      diverse250: 2.5,
     },
   };
 
-  // HIER WURDE DER HANDLER FÜR DIE ADRESSFELDER HINZUGEFÜGT
   const handleDetailsChange = (e) => {
     const { name, value } = e.target;
     setOrder((prev) => ({
       ...prev,
-      deliveryDetails: {
-        ...prev.deliveryDetails,
-        [name]: value,
-      },
+      deliveryDetails: { ...prev.deliveryDetails, [name]: value },
     }));
   };
 
@@ -205,13 +204,17 @@ export default function Home() {
     for (const [item, count] of Object.entries(order.mainCourses)) {
       total += count * prices.mainCourses[item];
     }
-    if (order.options.dessertPeople >= 5) {
-      total += order.options.dessertPeople * prices.options.dessert;
-    }
+
+    // HIER IST DIE ÄNDERUNG: Die if-Bedingung wurde entfernt.
+    total += order.options.dessertPeople * prices.options.dessert;
+
     total += order.options.weinFlaschen * prices.options.wein;
     if (order.options.transport) {
       total += prices.options.transport;
     }
+    total += order.options.diverse100 * prices.options.diverse100;
+    total += order.options.diverse250 * prices.options.diverse250;
+
     return total.toFixed(2);
   };
 
@@ -223,7 +226,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 grid items-start justify-items-center p-4 sm:p-12 gap-6">
       <div className="flex flex-wrap gap-4 items-center justify-center">
-        {/* HIER WURDE DER NEUE BUTTON FÜR DIE LIEFERDETAILS HINZUGEFÜGT */}
         <button
           className={`p-4 rounded-lg text-white text-xl font-semibold transition-colors ${
             buttonMode === "details"
@@ -273,7 +275,6 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col w-full max-w-2xl mb-24">
-        {/* HIER WURDE DIE NEUE SEKTION FÜR DIE LIEFERDETAILS HINZUGEFÜGT */}
         {buttonMode === "details" && (
           <div className="w-full">
             <h1 className="text-5xl font-bold my-6 text-center text-red-400">
@@ -677,8 +678,9 @@ export default function Home() {
                   Weitere Optionen
                 </h2>
                 <div className="flex flex-col gap-4">
+                  {/* HIER IST DIE ÄNDERUNG: Der Text "(ab 5 Pers.)" wurde entfernt */}
                   <QuantityControl
-                    name="Dessert (ab 5 Pers.)"
+                    name="Dessert"
                     value={order.options.dessertPeople}
                     onUpdate={(val) =>
                       updateQuantity(
@@ -696,6 +698,28 @@ export default function Home() {
                         "options",
                         "weinFlaschen",
                         val - order.options.weinFlaschen
+                      )
+                    }
+                  />
+                  <QuantityControl
+                    name="Diverse Speisen (1,00€)"
+                    value={order.options.diverse100}
+                    onUpdate={(val) =>
+                      updateQuantity(
+                        "options",
+                        "diverse100",
+                        val - order.options.diverse100
+                      )
+                    }
+                  />
+                  <QuantityControl
+                    name="Diverse Speisen (2,50€)"
+                    value={order.options.diverse250}
+                    onUpdate={(val) =>
+                      updateQuantity(
+                        "options",
+                        "diverse250",
+                        val - order.options.diverse250
                       )
                     }
                   />

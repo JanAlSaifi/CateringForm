@@ -1,3 +1,5 @@
+// docx-generator.js
+
 import {
   Document,
   Packer,
@@ -14,10 +16,12 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 
+// Diese Hauptfunktion erstellt das Dokument
 export async function generateDocx(order, prices, total) {
+  // 1. Logo vom Server/aus dem public-Ordner laden
   let logoBuffer;
   try {
-    const response = await fetch("/logo.png");
+    const response = await fetch("/logo.png"); // Stellt sicher, dass logo.png im /public Ordner liegt
     logoBuffer = await response.arrayBuffer();
   } catch (error) {
     console.error(
@@ -31,9 +35,9 @@ export async function generateDocx(order, prices, total) {
     sections: [
       {
         children: [
-          createHeaderTable(order.deliveryDetails, logoBuffer), // Kopfzeile mit Adressen und Logo
+          createHeaderTable(order.deliveryDetails, logoBuffer),
           new Paragraph({ text: " ", spacing: { after: 200 } }),
-          createMetaInfoTable(), // Tabelle für Rechnungsnummer und Datum
+          createMetaInfoTable(),
           new Paragraph({
             text: "Sehr geehrte Damen und Herren,",
             spacing: { before: 400, after: 200 },
@@ -41,9 +45,9 @@ export async function generateDocx(order, prices, total) {
           new Paragraph({
             text: "wir bedanken uns für den Auftrag und stellen Ihnen wie vereinbart folgende Leistung in Rechnung.",
           }),
-          createItemsTable(order, prices), // Haupttabelle mit allen bestellten Artikeln
-          createTotalsTable(total), // Tabelle für Netto, MwSt. und Brutto
-          createFooter(), // Fußzeile mit Bankdaten etc.
+          createItemsTable(order, prices),
+          createTotalsTable(total),
+          createFooter(),
         ],
       },
     ],
@@ -60,7 +64,6 @@ export async function generateDocx(order, prices, total) {
 
 // --- HELPER-FUNKTIONEN ZUM ERSTELLEN DER DOKUMENT-TEILE ---
 
-// Erstellt die Kopfzeile (2-spaltig, unsichtbar)
 function createHeaderTable(details, logoBuffer) {
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -75,7 +78,6 @@ function createHeaderTable(details, logoBuffer) {
     rows: [
       new TableRow({
         children: [
-          // Linke Spalte: Adressen
           new TableCell({
             children: [
               new Paragraph({
@@ -85,16 +87,14 @@ function createHeaderTable(details, logoBuffer) {
               }),
               new Paragraph("Alsterdorfer Str. 76"),
               new Paragraph("22299 Hamburg"),
-              new Paragraph({ text: " ", spacing: { after: 300 } }), // Abstand
+              new Paragraph({ text: " ", spacing: { after: 300 } }),
               new Paragraph(details.contactPerson),
               new Paragraph(details.street),
               new Paragraph(`${details.zipCode} ${details.city}`),
             ],
           }),
-          // Rechte Spalte: Logo und Kontaktdaten
           new TableCell({
             children: [
-              // Logo, falls es geladen wurde
               ...(logoBuffer
                 ? [
                     new Paragraph({
@@ -137,7 +137,6 @@ function createHeaderTable(details, logoBuffer) {
   });
 }
 
-// Erstellt die Tabelle für Rechnungs-Nr und Datum
 function createMetaInfoTable() {
   const today = new Date();
   const formattedDate = `${today.getDate().toString().padStart(2, "0")}.${(
@@ -145,7 +144,6 @@ function createMetaInfoTable() {
   )
     .toString()
     .padStart(2, "0")}.${today.getFullYear()}`;
-  // Erzeugt eine simple, einzigartige Nummer basierend auf der Zeit
   const invoiceNumber = `RE-${today.getFullYear()}${
     today.getMonth() + 1
   }${today.getDate()}-${Date.now().toString().slice(-5)}`;
@@ -163,7 +161,7 @@ function createMetaInfoTable() {
     rows: [
       new TableRow({
         children: [
-          new TableCell({ children: [] }), // Leere Zelle links
+          new TableCell({ children: [] }),
           new TableCell({
             children: [
               new Paragraph({
@@ -182,7 +180,6 @@ function createMetaInfoTable() {
   });
 }
 
-// Erstellt die Haupt-Tabelle mit den bestellten Artikeln
 function createItemsTable(order, prices) {
   const { mesa, menus, fingerfood, mainCourses, options } = order;
   const tableHeader = new TableRow({
@@ -205,7 +202,6 @@ function createItemsTable(order, prices) {
 
   const tableRows = [];
 
-  // Logik für Mesa
   if (mesa.active) {
     const price = mesa.type === "8" ? prices.mesa8 : prices.mesa10;
     tableRows.push(
@@ -224,7 +220,6 @@ function createItemsTable(order, prices) {
     );
   }
 
-  // Logik für Menüs
   const menuItems = [
     {
       key: "vegetarisch",
@@ -259,7 +254,6 @@ function createItemsTable(order, prices) {
     }
   });
 
-  // Logik für andere Posten (Fingerfood, Hauptgerichte, etc.)
   const otherItems = [
     ...Object.entries(fingerfood),
     ...Object.entries(mainCourses),
@@ -299,14 +293,108 @@ function createItemsTable(order, prices) {
     }
   });
 
-  // Transportkosten
+  // NEU: Logik für diverse Speisen und andere Optionen in der Tabelle
+  if (options.dessertPeople > 0) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph(`${options.dessertPeople}`)],
+          }),
+          new TableCell({ children: [new Paragraph("Dessert")] }),
+          new TableCell({
+            children: [new Paragraph(`${prices.options.dessert.toFixed(2)} €`)],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph(
+                `${(prices.options.dessert * options.dessertPeople).toFixed(
+                  2
+                )} €`
+              ),
+            ],
+          }),
+        ],
+      })
+    );
+  }
+  if (options.weinFlaschen > 0) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph(`${options.weinFlaschen}`)],
+          }),
+          new TableCell({ children: [new Paragraph("Wein aus dem Libanon")] }),
+          new TableCell({
+            children: [new Paragraph(`${prices.options.wein.toFixed(2)} €`)],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph(
+                `${(prices.options.wein * options.weinFlaschen).toFixed(2)} €`
+              ),
+            ],
+          }),
+        ],
+      })
+    );
+  }
+  if (options.diverse100 > 0) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph(`${options.diverse100}`)] }),
+          new TableCell({ children: [new Paragraph("Diverse Speisen")] }),
+          new TableCell({
+            children: [
+              new Paragraph(`${prices.options.diverse100.toFixed(2)} €`),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph(
+                `${(prices.options.diverse100 * options.diverse100).toFixed(
+                  2
+                )} €`
+              ),
+            ],
+          }),
+        ],
+      })
+    );
+  }
+  if (options.diverse250 > 0) {
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph(`${options.diverse250}`)] }),
+          new TableCell({ children: [new Paragraph("Diverse Speisen")] }),
+          new TableCell({
+            children: [
+              new Paragraph(`${prices.options.diverse250.toFixed(2)} €`),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph(
+                `${(prices.options.diverse250 * options.diverse250).toFixed(
+                  2
+                )} €`
+              ),
+            ],
+          }),
+        ],
+      })
+    );
+  }
   if (options.transport) {
     tableRows.push(
       new TableRow({
         children: [
           new TableCell({ children: [new Paragraph("1")] }),
           new TableCell({ children: [new Paragraph("Lieferkosten")] }),
-          new TableCell({ children: [new Paragraph("")] }), // Kein Einzelpreis
+          new TableCell({ children: [new Paragraph("")] }),
           new TableCell({
             children: [
               new Paragraph(`${prices.options.transport.toFixed(2)} €`),
@@ -324,9 +412,7 @@ function createItemsTable(order, prices) {
   });
 }
 
-// Erstellt die untere Tabelle für die Summen
 function createTotalsTable(totalBrutto) {
-  // Annahme: 7% MwSt. wie in der PDF-Rechnung
   const totalNetto = (parseFloat(totalBrutto) / 1.07).toFixed(2);
   const mwstAmount = (parseFloat(totalBrutto) - parseFloat(totalNetto)).toFixed(
     2
@@ -345,7 +431,7 @@ function createTotalsTable(totalBrutto) {
     rows: [
       new TableRow({
         children: [
-          new TableCell({ children: [] }), // Leere Zelle
+          new TableCell({ children: [] }),
           new TableCell({
             children: [
               new Paragraph({
@@ -373,10 +459,8 @@ function createTotalsTable(totalBrutto) {
   });
 }
 
-// Erstellt die Fußzeile mit den Bankdaten
 function createFooter() {
   const today = new Date();
-  // Lieferdatum kann aus der App kommen, hier als Beispiel das heutige Datum
   const lieferDatum = `${today.getDate().toString().padStart(2, "0")}.${(
     today.getMonth() + 1
   )
